@@ -1,0 +1,9 @@
+streamlit
+easyocr
+pandas
+requests
+astral
+pillow
+openpyxl
+numpy
+supabase
