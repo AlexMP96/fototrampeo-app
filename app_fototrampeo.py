@@ -15,10 +15,9 @@ st.set_page_config(page_title="Registro Fototrampeo", layout="wide")
 st.title("📋 Registro de Fototrampeo")
 st.markdown("Sube fotos → se leen solas y se guardan **permanentemente**.")
 
-# ========== CONFIGURACIÓN SUPABASE ==========
-# Sustituye estos valores por los de tu proyecto Supabase
-SUPABASE_URL = st.secrets.get("SUPABASE_URL", "TU_SUPABASE_URL")
-SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "TU_SUPABASE_ANON_KEY")
+# ========== CLAVES TEMPORALES (para prueba) ==========
+SUPABASE_URL = "https://lvphagwtkpksisxoavgw.supabase.co"
+SUPABASE_KEY = "sb_publishable_MbfNW-JH9_ZQtEJkS6UPew_R_V9cOMu"
 BUCKET_NAME = "fototrampeo"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -116,7 +115,8 @@ def load_registros():
     try:
         response = supabase.table("registros_fototrampeo").select("*").order("id", desc=True).execute()
         return response.data
-    except:
+    except Exception as e:
+        st.error(f"Error cargando registros: {e}")
         return []
 
 # Procesar y guardar permanentemente
@@ -144,7 +144,6 @@ if st.button("➕ Procesar y guardar permanentemente", type="primary") and uploa
                         image_bytes,
                         {"content-type": "image/jpeg", "upsert": "true"}
                     )
-                    # Obtener URL pública
                     public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(file_name)
                 except Exception as e:
                     st.error(f"Error subiendo foto: {e}")
@@ -172,9 +171,12 @@ if st.button("➕ Procesar y guardar permanentemente", type="primary") and uploa
                     "iluminacion_lunar": moon_pct,
                     "foto_url": public_url,
                 }
-                supabase.table("registros_fototrampeo").insert(registro).execute()
+                try:
+                    supabase.table("registros_fototrampeo").insert(registro).execute()
+                    st.success(f"Guardado: {uploaded_file.name}")
+                except Exception as e:
+                    st.error(f"Error guardando registro: {e}")
         
-        st.success("¡Fotos guardadas permanentemente!")
         st.rerun()
 
 # Mostrar registros permanentes
@@ -212,9 +214,7 @@ if registros:
                 """)
                 
                 if st.button("🗑️ Borrar", key=f"del_{reg.get('id')}"):
-                    # Borrar de la tabla y del storage
                     try:
-                        # Extraer nombre de archivo de la URL
                         file_name = reg["foto_url"].split("/")[-1].split("?")[0]
                         supabase.storage.from_(BUCKET_NAME).remove([file_name])
                     except:
@@ -222,7 +222,6 @@ if registros:
                     supabase.table("registros_fototrampeo").delete().eq("id", reg["id"]).execute()
                     st.rerun()
     
-    # Descargar Excel
     if st.button("📥 Descargar Excel"):
         df = pd.DataFrame(registros)
         if "foto_url" in df.columns:
@@ -237,4 +236,4 @@ else:
     st.info("Aún no hay registros permanentes. Sube fotos y pulsa el botón.")
 
 st.markdown("---")
-st.caption("Almacenamiento permanente con Supabase (gratis).")
+st.caption("Versión de prueba con claves directas.")
